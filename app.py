@@ -102,7 +102,7 @@ else:
     if st.session_state["nivel"] == "admin":
         menu_paginas = [pg_separacao, pg_pedidos, pg_estoque, pg_gestao]
     else:
-        menu_paginas = [pg_estoque, pg_pedidos]
+        menu_paginas = [pg_estoque, pg_separacao]
 
     # 3. Criamos a navegação
     pg = st.navigation(menu_paginas)
