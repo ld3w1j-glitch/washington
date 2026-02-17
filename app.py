@@ -112,8 +112,9 @@ if not st.session_state["logado"]:
     st.markdown("<style>[data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
 else:
     # 1. Definição das páginas (Apontando para a pasta /pages)
-    pg_separacao = st.Page("pages/separacao.py", title="Separação", icon="🚜", default=(st.session_state["nivel"] == "operador"))
+    
     pg_estoque = st.Page("pages/estoque.py", title="Estoque", icon="📦")
+    pg_separacao = st.Page("pages/separacao.py", title="Separação", icon="🚜", default=(st.session_state["nivel"] == "operador"))
     pg_pedidos = st.Page("pages/pedidos.py", title="Fazer Pedidos", icon="📝")
     pg_gestao = st.Page(pagina_gestao, title="Gestão de Usuários", icon="👥")
 
