@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# 1. CONFIGURAÇÃO DA PÁGINA (Deve ser o primeiro comando Streamlit)
+# 1. CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
     page_title="Sistemas Washington", 
     page_icon="🏢", 
@@ -17,9 +17,10 @@ if "usuario_nome" not in st.session_state:
     st.session_state["usuario_nome"] = ""
 if "nivel" not in st.session_state:
     st.session_state["nivel"] = "operador"
+if "paginas_permitidas" not in st.session_state:
+    st.session_state["paginas_permitidas"] = []
 
 # 3. CONEXÃO COM O GOOGLE SHEETS
-# Certifique-se de que a URL está correta e a planilha está compartilhada
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1lIldvBHzJ3VIczDvZv-WRFtp3R7Jf5yfM2LrIlseshE/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -27,7 +28,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 @st.cache_data(ttl=300)
 def buscar_usuarios():
     try:
-        # Lendo a aba "Usuarios"
         df = conn.read(spreadsheet=URL_PLANILHA, worksheet="Usuarios").fillna("")
         return df
     except Exception as e:
@@ -49,7 +49,6 @@ def tela_login():
             
             if st.form_submit_button("Entrar", use_container_width=True):
                 if not df_u.empty:
-                    # Normalização para comparação segura
                     df_u['usuario'] = df_u['usuario'].astype(str).str.strip().str.lower()
                     df_u['senha'] = df_u['senha'].astype(str).str.strip()
                     
@@ -59,14 +58,19 @@ def tela_login():
                         st.session_state["logado"] = True
                         st.session_state["usuario_nome"] = str(user_match.iloc[0]['usuario'])
                         st.session_state["nivel"] = str(user_match.iloc[0].get('nivel', 'operador')).lower()
-                        st.cache_data.clear() # Limpa cache para carregar dados novos do usuário
+                        
+                        # NOVO: Carrega a lista de páginas permitidas da planilha
+                        paginas_str = str(user_match.iloc[0].get('paginas', ''))
+                        st.session_state["paginas_permitidas"] = [p.strip().lower() for p in paginas_str.split(",") if p.strip()]
+                        
+                        st.cache_data.clear()
                         st.rerun()
                     else:
                         st.error("❌ Usuário ou senha incorretos.")
                 else:
                     st.warning("⚠️ Base de usuários não encontrada ou vazia.")
 
-# --- PÁGINA DE GESTÃO DE USUÁRIOS (FUNÇÃO INTERNA) ---
+# --- PÁGINA DE GESTÃO DE USUÁRIOS ---
 def pagina_gestao():
     st.title("👥 Gerenciamento de Usuários")
     df_u = conn.read(spreadsheet=URL_PLANILHA, worksheet="Usuarios", ttl=0).fillna("")
@@ -79,10 +83,13 @@ def pagina_gestao():
             n_u = st.text_input("Nome de Usuário").strip().lower()
             n_s = st.text_input("Senha").strip()
             n_v = st.selectbox("Nível de Acesso", ["operador", "admin"])
+            # NOVO: Seleção de páginas no cadastro
+            n_p = st.multiselect("Páginas Permitidas", ["estoque", "pedidos", "separacao", "gestao"], default=["estoque"])
             
             if st.form_submit_button("Salvar Novo Usuário"):
                 if n_u and n_s:
-                    novo_df = pd.concat([df_u, pd.DataFrame([{"usuario": n_u, "senha": n_s, "nivel": n_v}])], ignore_index=True)
+                    paginas_finais = ",".join(n_p)
+                    novo_df = pd.concat([df_u, pd.DataFrame([{"usuario": n_u, "senha": n_s, "nivel": n_v, "paginas": paginas_finais}])], ignore_index=True)
                     conn.update(spreadsheet=URL_PLANILHA, worksheet="Usuarios", data=novo_df)
                     st.cache_data.clear()
                     st.success(f"Usuário {n_u} cadastrado!")
@@ -108,38 +115,48 @@ def pagina_gestao():
 # --- LÓGICA DE NAVEGAÇÃO ---
 if not st.session_state["logado"]:
     tela_login()
-    # Esconde a barra lateral na tela de login
     st.markdown("<style>[data-testid='stSidebar'] {display: none;}</style>", unsafe_allow_html=True)
 else:
-    # 1. Definição das páginas (Apontando para a pasta /pages)
-    
-    pg_estoque = st.Page("pages/estoque.py", title="Estoque", icon="📦")
-    pg_separacao = st.Page("pages/separacao.py", title="Separação", icon="🚜", default=(st.session_state["nivel"] == "operador"))
-    pg_pedidos = st.Page("pages/pedidos.py", title="Fazer Pedidos", icon="📝")
-    pg_gestao = st.Page(pagina_gestao, title="Gestão de Usuários", icon="👥")
+    # 1. Mapa de Todas as Páginas Disponíveis
+    mapa_paginas = {
+        "estoque": st.Page("pages/estoque.py", title="Estoque", icon="📦"),
+        "pedidos": st.Page("pages/pedidos.py", title="Fazer Pedidos", icon="📝"),
+        "separacao": st.Page("pages/separacao.py", title="Separação", icon="🚜"),
+        "gestao": st.Page(pagina_gestao, title="Gestão de Usuários", icon="👥")
+    }
 
-    # 2. Configuração do Menu por Nível
-    if st.session_state["nivel"] == "admin":
-        menu_paginas = [pg_estoque,pg_pedidos, pg_separacao,pg_gestao]
-    else:
-        # Operadores veem apenas Estoque e Separação
-        menu_paginas = [pg_estoque, pg_separacao]
+    # 2. Filtrar Páginas com base na coluna "paginas" da planilha
+    menu_paginas = []
+    
+    # Se for ADMIN, ele pode ver a Gestão mesmo que não esteja escrito na célula
+    if st.session_state["nivel"] == "admin" and "gestao" not in st.session_state["paginas_permitidas"]:
+        st.session_state["paginas_permitidas"].append("gestao")
+
+    for p in st.session_state["paginas_permitidas"]:
+        if p in mapa_paginas:
+            menu_paginas.append(mapa_paginas[p])
 
     # 3. Inicializa Navegação
-    navigation = st.navigation(menu_paginas)
-    
-    # Customização da Barra Lateral
-    with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/2304/2304226.png", width=100) # Ícone Genérico
-        st.markdown(f"### Bem-vindo, **{st.session_state['usuario_nome'].capitalize()}**")
-        st.info(f"Nível: {st.session_state['nivel'].upper()}")
-        st.divider()
-        if st.button("🚪 Sair", use_container_width=True):
+    if not menu_paginas:
+        st.error("Você não tem acesso a nenhuma página. Fale com o admin.")
+        if st.sidebar.button("Sair"):
             st.session_state["logado"] = False
             st.rerun()
+    else:
+        navigation = st.navigation(menu_paginas)
+        
+        # Customização da Barra Lateral
+        with st.sidebar:
+            st.image("https://cdn-icons-png.flaticon.com/512/2304/2304226.png", width=100)
+            st.markdown(f"### Bem-vindo, **{st.session_state['usuario_nome'].capitalize()}**")
+            st.info(f"Nível: {st.session_state['nivel'].upper()}")
+            st.divider()
+            if st.button("🚪 Sair", use_container_width=True):
+                st.session_state["logado"] = False
+                st.rerun()
 
-    # 4. Execução
-    try:
-        navigation.run()
-    except Exception as e:
-        st.error(f"Erro ao carregar a interface: {e}")
+        # 4. Execução
+        try:
+            navigation.run()
+        except Exception as e:
+            st.error(f"Erro ao carregar a interface: {e}")
