@@ -4,7 +4,7 @@ import pandas as pd
 
 # 1. CONFIGURAÇÃO DA PÁGINA (Deve ser o primeiro comando Streamlit)
 st.set_page_config(
-    page_title="Sistema Alvorada", 
+    page_title="Sistemas Washington", 
     page_icon="🏢", 
     layout="wide",
     initial_sidebar_state="expanded"
@@ -40,7 +40,7 @@ def tela_login():
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        st.title("🔐 Login - Portal Alvorada")
+        st.title("🔐 Login")
         df_u = buscar_usuarios()
         
         with st.form("login_form"):
