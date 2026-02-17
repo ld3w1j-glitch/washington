@@ -120,7 +120,7 @@ else:
 
     # 2. Configuração do Menu por Nível
     if st.session_state["nivel"] == "admin":
-        menu_paginas = [pg_separacao, pg_pedidos, pg_estoque, pg_gestao]
+        menu_paginas = [pg_estoque, pg_separacao, pg_pedidos, pg_gestao]
     else:
         # Operadores veem apenas Estoque e Separação
         menu_paginas = [pg_estoque, pg_separacao]
