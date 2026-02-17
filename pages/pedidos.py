@@ -9,7 +9,7 @@ if "logado" not in st.session_state or not st.session_state["logado"]:
     st.stop()
 
 # Configuração da página para aproveitar o espaço lateral
-st.title("📝 Sistema de Pedidos - Alvorada")
+st.title("📝 Sistema de Pedidos")
 
 # Inicialização de estados
 if "carrinho" not in st.session_state:
