@@ -1,5 +1,6 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
+import pandas as pd  # FALTAVA ESTE IMPORT!
 
 st.title("🔍 Diagnóstico de Ligação")
 
@@ -20,17 +21,19 @@ else:
     except Exception as e:
         st.error(f"❌ Erro ao ler campos do secrets.toml: {e}")
 
-# 3. Teste de Escrita Real
+# 3. Teste de Leitura da aba Usuarios
 st.divider()
-st.subheader("Teste de Escrita na Folha")
+st.subheader("Teste de Leitura da aba 'Usuarios'")
+
 url = "https://docs.google.com/spreadsheets/d/1lIldvBHzJ3VIczDvZv-WRFtp3R7Jf5yfM2LrIlseshE/edit?usp=sharing"
 
-if st.button("Tentar Escrever Agora"):
+if st.button("Testar Conexão Agora"):
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
-        test_data = {"Teste": ["OK"]}
-        conn.update(spreadsheet=url, worksheet="Usuarios", data=pd.DataFrame(test_data))
-        st.success("🔥 CONSEGUI ESCREVER! A ligação está perfeita.")
+        df = conn.read(spreadsheet=url, worksheet="Usuarios")
+        st.success("✅ CONEXÃO BEM-SUCEDIDA!")
+        st.write("Dados encontrados na aba Usuarios:")
+        st.dataframe(df)
     except Exception as e:
-        st.error(f"❌ Falha ao escrever: {e}")
-        st.info("Se o erro for 'Permission Denied', o problema é a partilha no Google Sheets.")
+        st.error(f"❌ Falha na conexão: {e}")
+        st.info("💡 Dica: Se o erro mencionar 'WorksheetNotFound', crie a aba 'Usuarios' na planilha.")
