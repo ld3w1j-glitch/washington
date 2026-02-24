@@ -29,6 +29,7 @@ def carregar_dados():
         df_p['Item'] = df_p['Item'].astype(str).str.strip()
         df_p['Descrição'] = df_p['Descrição'].astype(str).str.strip()
         df_p['Categoria'] = df_p['Categoria'].astype(str).str.strip()
+        df_p['Embalagem'] = df_p['Embalagem'].astype(str).str.strip()
         
         if not df_m.empty:
             df_m['codigo'] = df_m['codigo'].astype(str).str.strip()
@@ -74,7 +75,7 @@ def calcular_estoque(p, m):
 df_estoque = calcular_estoque(df_p, df_m)
 
 # --- INTERFACE POR ABAS ---
-abas_nomes = ["📊 Saldo Atual", "📜 Histórico", "🔄 Lançar Movimento"]
+abas_nomes = ["📊 Saldo Atual", "📜 Histórico", "🔄 Lançar Movimento", "➕ Cadastrar Item"]
 if nivel_usuario == "admin":
     abas_nomes.append("🛠️ Admin")
 
@@ -169,15 +170,115 @@ with abas[2]:
                 conn.update(spreadsheet=URL_PLANILHA, worksheet="Movimentacoes", data=df_m_final)
                 
                 st.cache_data.clear()
-                st.success(f"Lançamento de {tipo} realizado!")
+                st.success(f"✅ Lançamento de {tipo} realizado com sucesso!")
                 st.rerun()
     else:
         st.warning("Nenhum item corresponde aos filtros.")
 
-# ABA 4: ADMIN
+# ABA 4: CADASTRAR NOVO ITEM (NOVA FUNCIONALIDADE)
+with abas[3]:
+    st.subheader("➕ Cadastrar Novo Item")
+    st.info("Preencha todos os campos obrigatórios para manter a consistência do estoque.")
+    
+    # Busca categorias existentes para sugerir + permitir nova
+    cats_existentes = sorted(df_p['Categoria'].unique().tolist()) if not df_p.empty else []
+    
+    with st.form("form_novo_item", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Código/Item - único e obrigatório
+            novo_item = st.text_input("Código do Item *", 
+                                    placeholder="Ex: PROD-001",
+                                    help="Código único de identificação").strip().upper()
+            
+            # Categoria - selectbox + texto livre
+            cat_opcao = st.selectbox("Categoria existente", ["Nova categoria..."] + cats_existentes)
+            if cat_opcao == "Nova categoria...":
+                nova_categoria = st.text_input("Nova Categoria *", placeholder="Ex: Eletrônicos").strip()
+                categoria_final = nova_categoria
+            else:
+                categoria_final = cat_opcao
+        
+        with col2:
+            # Descrição
+            nova_descricao = st.text_input("Descrição *", 
+                                         placeholder="Ex: Smartphone Samsung Galaxy").strip()
+            
+            # Embalagem/Unidade
+            nova_embalagem = st.selectbox("Embalagem/Unidade *", 
+                                        ["UN", "CX", "KG", "LT", "MT", "PC", "PAR", "RL", "FD", "OUTRO"])
+            if nova_embalagem == "OUTRO":
+                nova_embalagem = st.text_input("Especifique a unidade").strip().upper()
+            
+            # Estoque Inicial (padrão 0)
+            estoque_inicial = st.number_input("Estoque Inicial", 
+                                            min_value=0.0, 
+                                            value=0.0, 
+                                            step=1.0,
+                                            help="Quantidade inicial em estoque (padrão: 0)")
+        
+        # Validação visual
+        st.markdown("---")
+        st.caption("Campos marcados com * são obrigatórios")
+        
+        submitted = st.form_submit_button("💾 Salvar Novo Item", use_container_width=True, type="primary")
+        
+        if submitted:
+            # VALIDAÇÕES DE CONSISTÊNCIA
+            erros = []
+            
+            if not novo_item:
+                erros.append("O Código do Item é obrigatório")
+            elif novo_item in df_p['Item'].values:
+                erros.append(f"O código '{novo_item}' já existe no cadastro")
+            
+            if not categoria_final:
+                erros.append("A Categoria é obrigatória")
+            
+            if not nova_descricao:
+                erros.append("A Descrição é obrigatória")
+            
+            if not nova_embalagem:
+                erros.append("A Embalagem/Unidade é obrigatória")
+            
+            if erros:
+                for erro in erros:
+                    st.error(f"❌ {erro}")
+            else:
+                try:
+                    # Cria o novo registro
+                    novo_produto = pd.DataFrame([{
+                        "Item": str(novo_item),
+                        "Descrição": str(nova_descricao),
+                        "Categoria": str(categoria_final),
+                        "Embalagem": str(nova_embalagem),
+                        "Estoque_Inicial": float(estoque_inicial)
+                    }])
+                    
+                    # Concatena com os dados existentes
+                    df_p_novo = pd.concat([df_p, novo_produto], ignore_index=True)
+                    
+                    # Atualiza a planilha
+                    conn.update(spreadsheet=URL_PLANILHA, worksheet="Produtos", data=df_p_novo)
+                    
+                    # Limpa cache e recarrega
+                    st.cache_data.clear()
+                    
+                    st.success(f"✅ Item '{novo_item} - {nova_descricao}' cadastrado com sucesso!")
+                    st.balloons()
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Erro ao salvar na planilha: {e}")
+
+# ABA 5: ADMIN (se for admin)
 if nivel_usuario == "admin":
-    with abas[3]:
-        st.subheader("Gerenciamento Administrativo")
+    with abas[4]:
+        st.subheader("🛠️ Gerenciamento Administrativo")
+        
+        # Seção para exclusão de movimentações
+        st.markdown("### 🗑️ Excluir Movimentação")
         if not df_m.empty:
             id_del = st.selectbox("Selecione ID para excluir", df_m['id'].unique().tolist())
             if st.button("❌ EXCLUIR REGISTRO", type="primary"):
@@ -185,3 +286,49 @@ if nivel_usuario == "admin":
                 conn.update(spreadsheet=URL_PLANILHA, worksheet="Movimentacoes", data=df_m_nova)
                 st.cache_data.clear()
                 st.rerun()
+        else:
+            st.info("Nenhuma movimentação para excluir.")
+        
+        st.markdown("---")
+        
+        # Seção para editar/excluir produtos (extra)
+        st.markdown("### 📝 Editar/Excluir Produto")
+        if not df_p.empty:
+            item_edit = st.selectbox("Selecione o produto", 
+                                   (df_p['Item'] + " - " + df_p['Descrição']).tolist())
+            
+            if item_edit:
+                codigo_edit = item_edit.split(" - ")[0]
+                produto_atual = df_p[df_p['Item'] == codigo_edit].iloc[0]
+                
+                with st.expander("Editar Produto"):
+                    nova_desc = st.text_input("Descrição", value=produto_atual['Descrição'])
+                    nova_cat = st.text_input("Categoria", value=produto_atual['Categoria'])
+                    nova_emb = st.text_input("Embalagem", value=produto_atual['Embalagem'])
+                    
+                    col_salvar, col_excluir = st.columns(2)
+                    
+                    with col_salvar:
+                        if st.button("💾 Atualizar Produto"):
+                            df_p.loc[df_p['Item'] == codigo_edit, 'Descrição'] = nova_desc
+                            df_p.loc[df_p['Item'] == codigo_edit, 'Categoria'] = nova_cat
+                            df_p.loc[df_p['Item'] == codigo_edit, 'Embalagem'] = nova_emb
+                            
+                            conn.update(spreadsheet=URL_PLANILHA, worksheet="Produtos", data=df_p)
+                            st.cache_data.clear()
+                            st.success("Produto atualizado!")
+                            st.rerun()
+                    
+                    with col_excluir:
+                        # Verifica se há movimentações antes de permitir exclusão
+                        tem_movimentacao = codigo_edit in df_m['codigo'].values if not df_m.empty else False
+                        
+                        if tem_movimentacao:
+                            st.warning("⚠️ Este item possui movimentações no histórico. Não é possível excluir.")
+                        else:
+                            if st.button("🗑️ Excluir Produto", type="secondary"):
+                                df_p_novo = df_p[df_p['Item'] != codigo_edit]
+                                conn.update(spreadsheet=URL_PLANILHA, worksheet="Produtos", data=df_p_novo)
+                                st.cache_data.clear()
+                                st.success("Produto excluído!")
+                                st.rerun()
