@@ -3,3 +3,5 @@ git+https://github.com/streamlit/gsheets-connection.git@main
 pandas
 numpy
 openpyxl
+qrcode[pil]
+
