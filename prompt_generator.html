@@ -1,0 +1,872 @@
+
+html_content = '''<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Prompts Profissionais</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --neon-cyan: #00f5d4;
+            --neon-pink: #ff006e;
+            --neon-purple: #8338ec;
+            --dark-bg: #0a0a0f;
+            --card-bg: rgba(20, 20, 30, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(131, 56, 236, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 245, 212, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 40%, rgba(255, 0, 110, 0.1) 0%, transparent 40%);
+        }
+        
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            animation: gridMove 20s linear infinite;
+        }
+        
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            letter-spacing: -2px;
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            0% { filter: drop-shadow(0 0 20px rgba(0, 245, 212, 0.3)); }
+            100% { filter: drop-shadow(0 0 40px rgba(255, 0, 110, 0.5)); }
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: var(--neon-cyan);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 245, 212, 0.1);
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title span {
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 20px rgba(0, 245, 212, 0.2);
+        }
+        
+        select option {
+            background: var(--dark-bg);
+            color: var(--text-primary);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .type-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .type-btn {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .type-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+        
+        .type-btn.active {
+            border-color: var(--neon-cyan);
+            background: rgba(0, 245, 212, 0.1);
+            color: var(--neon-cyan);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .checkbox-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            accent-color: var(--neon-cyan);
+        }
+        
+        .generate-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            border: none;
+            border-radius: 12px;
+            color: var(--dark-bg);
+            font-family: inherit;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 20px;
+        }
+        
+        .generate-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 245, 212, 0.4);
+        }
+        
+        .output-section {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .output-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink), var(--neon-purple));
+        }
+        
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .output-title {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .copy-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .copy-btn:hover {
+            background: var(--neon-cyan);
+            color: var(--dark-bg);
+            border-color: var(--neon-cyan);
+        }
+        
+        .copy-btn.copied {
+            background: var(--neon-cyan);
+            color: var(--dark-bg);
+        }
+        
+        #output-text {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            min-height: 300px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(0, 245, 212, 0.2);
+            color: var(--neon-cyan);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .complexity-slider {
+            width: 100%;
+            margin-top: 10px;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+        
+        .complexity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--neon-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 245, 212, 0.5);
+        }
+        
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        @media (max-width: 600px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    <div class="grid-overlay"></div>
+    
+    <div class="container">
+        <header>
+            <h1>Prompt Architect</h1>
+            <p class="subtitle">Gere prompts estruturados e profissionais para qualquer tipo de projeto digital</p>
+        </header>
+        
+        <div class="main-grid">
+            <div class="left-panel">
+                <div class="card">
+                    <h2 class="card-title"><span>🎯</span> Tipo de Projeto</h2>
+                    <div class="type-selector">
+                        <button class="type-btn active" data-type="site">Site Institucional</button>
+                        <button class="type-btn" data-type="ecommerce">E-commerce</button>
+                        <button class="type-btn" data-type="landing">Landing Page</button>
+                        <button class="type-btn" data-type="app">Aplicação Web</button>
+                        <button class="type-btn" data-type="blog">Blog/Portal</button>
+                        <button class="type-btn" data-type="saas">SaaS/Dashboard</button>
+                        <button class="type-btn" data-type="portfolio">Portfólio</button>
+                        <button class="type-btn" data-type="programa">Programa/Software</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><span>📋</span> Informações Básicas</h2>
+                    <div class="form-group">
+                        <label>Nome do Projeto/Cliente</label>
+                        <input type="text" id="project-name" placeholder="Ex: Loja TechVision">
+                    </div>
+                    <div class="form-group">
+                        <label>Ramo/Nicho</label>
+                        <input type="text" id="niche" placeholder="Ex: Tecnologia, Moda, Saúde, Educação...">
+                    </div>
+                    <div class="form-group">
+                        <label>Público-Alvo</label>
+                        <input type="text" id="audience" placeholder="Ex: Jovens adultos 18-35 anos, empresas B2B...">
+                    </div>
+                    <div class="form-group">
+                        <label>Objetivo Principal</label>
+                        <select id="objective">
+                            <option value="vendas">Gerar vendas/conversões</option>
+                            <option value="leads">Captar leads</option>
+                            <option value="brand">Fortalecer marca</option>
+                            <option value="info">Informar/educar</option>
+                            <option value="engajamento">Engajamento</option>
+                            <option value="app-download">Download de app</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><span>🎨</span> Estilo e Design</h2>
+                    <div class="form-group">
+                        <label>Estilo Visual</label>
+                        <select id="style">
+                            <option value="moderno">Moderno/Minimalista</option>
+                            <option value="corporativo">Corporativo/Profissional</option>
+                            <option value="criativo">Criativo/Artístico</option>
+                            <option value="tecnologico">Tecnológico/Futurista</option>
+                            <option value="elegante">Elegante/Luxo</option>
+                            <option value="jovial">Jovial/Descontraído</option>
+                            <option value="organico">Orgânico/Natural</option>
+                            <option value="retro">Retrô/Vintage</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Paleta de Cores (opcional)</label>
+                        <input type="text" id="colors" placeholder="Ex: Azul marinho, dourado e branco">
+                    </div>
+                    <div class="form-group">
+                        <label>Referências de Design</label>
+                        <input type="text" id="references" placeholder="Ex: Apple, Airbnb, Spotify...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="card">
+                    <h2 class="card-title"><span>⚙️</span> Funcionalidades e Recursos</h2>
+                    <div class="features-grid" id="features-container">
+                        <!-- Features will be populated by JS -->
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><span>🔧</span> Especificações Técnicas</h2>
+                    <div class="form-group">
+                        <label>Stack Tecnológica Preferida</label>
+                        <select id="stack">
+                            <option value="flex">Flexível/Recomendação do dev</option>
+                            <option value="react">React/Next.js</option>
+                            <option value="vue">Vue/Nuxt</option>
+                            <option value="wordpress">WordPress</option>
+                            <option value="shopify">Shopify</option>
+                            <option value="python">Python/Django</option>
+                            <option value="php">PHP/Laravel</option>
+                            <option value="nodejs">Node.js/Express</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Integrações Necessárias</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="stripe"> Stripe/Pagamentos
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="maps"> Google Maps
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="social"> Login Social
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="analytics"> Analytics
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="email"> Email Marketing
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="chat"> Chat ao vivo
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="api"> API Externa
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="cdn"> CDN/Mídia
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nível de Complexidade</label>
+                        <input type="range" min="1" max="5" value="3" class="complexity-slider" id="complexity">
+                        <div class="slider-labels">
+                            <span>Simples</span>
+                            <span>Médio</span>
+                            <span>Complexo</span>
+                            <span>Avançado</span>
+                            <span>Enterprise</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="card-title"><span>📝</span> Detalhes Adicionais</h2>
+                    <div class="form-group">
+                        <label>Descrição do Projeto</label>
+                        <textarea id="description" placeholder="Descreva o projeto, diferenciais, necessidades específicas..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Páginas/Seções Específicas</label>
+                        <input type="text" id="pages" placeholder="Ex: Home, Sobre, Serviços, Blog, Contato">
+                    </div>
+                    <div class="form-group">
+                        <label>Prazo Estimado</label>
+                        <select id="deadline">
+                            <option value="urgente">Urgente (1-2 semanas)</option>
+                            <option value="curto">Curto (1 mês)</option>
+                            <option value="medio">Médio (2-3 meses)</option>
+                            <option value="longo">Longo (3-6 meses)</option>
+                            <option value="flex">Flexível</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button class="generate-btn" onclick="generatePrompt()">
+            ✨ Gerar Prompt Profissional
+        </button>
+        
+        <div class="output-section" style="margin-top: 30px;">
+            <div class="output-header">
+                <h2 class="output-title"><span>📄</span> Prompt Gerado</h2>
+                <button class="copy-btn" onclick="copyToClipboard()">
+                    <span>📋</span> Copiar
+                </button>
+            </div>
+            <div id="output-text">Clique em "Gerar Prompt Profissional" para criar seu prompt estruturado...</div>
+        </div>
+    </div>
+    
+    <script>
+        // Features database by project type
+        const featuresByType = {
+            site: [
+                'Slider/Banner hero', 'Menu fixo/sticky', 'Formulário de contato', 
+                'Mapa de localização', 'Depoimentos', 'Galeria de imagens', 
+                'Blog integrado', 'FAQ', 'Chatbot', 'Newsletter'
+            ],
+            ecommerce: [
+                'Carrinho de compras', 'Checkout seguro', 'Filtros de produtos', 
+                'Busca avançada', 'Lista de desejos', 'Avaliações de produtos', 
+                'Comparação de produtos', 'Cálculo de frete', 'Pagamento parcelado', 
+                'Integração com estoque', 'Notificações WhatsApp', 'Recuperação de carrinho'
+            ],
+            landing: [
+                'Hero section impactante', 'CTAs estratégicos', 'Formulário de captura', 
+                'Contador regressivo', 'Prova social', 'Vídeo explicativo', 
+                'Benefícios em cards', 'FAQ', 'Garantia/Selo de segurança', 
+                'Sticky header com CTA'
+            ],
+            app: [
+                'Autenticação de usuários', 'Dashboard personalizado', 'Notificações push', 
+                'Upload de arquivos', 'Exportação de dados', 'Busca e filtros', 
+                'Relatórios/Analytics', 'Permissões de usuário', 'Modo offline', 
+                'API RESTful', 'Webhooks', 'Cache/localStorage'
+            ],
+            blog: [
+                'Sistema de categorias', 'Tags', 'Comentários', 'Compartilhamento social', 
+                'Newsletter', 'Posts relacionados', 'Autores múltiplos', 
+                'SEO otimizado', 'Leitura offline', 'Modo escuro'
+            ],
+            saas: [
+                'Multi-tenancy', 'Planos de assinatura', 'Painel administrativo', 
+                'API documentation', 'Webhooks', 'Integrações third-party', 
+                'Onboarding interativo', 'Team collaboration', 'Audit logs', 
+                'Data visualization', 'Export CSV/PDF', 'SSO/SAML'
+            ],
+            portfolio: [
+                'Galeria de projetos', 'Lightbox', 'Filtros por categoria', 
+                'Animações suaves', 'Currículo/About', 'Formulário de contato', 
+                'Links sociais', 'Download de CV', 'Testemunhos de clientes', 
+                'Blog técnico'
+            ],
+            programa: [
+                'Interface CLI/GUI', 'Processamento batch', 'Relatórios exportáveis', 
+                'Configurações personalizáveis', 'Logs de execução', 'Tratamento de erros', 
+                'Documentação inline', 'Testes automatizados', 'CI/CD ready', 
+                'Containerização Docker'
+            ]
+        };
+        
+        let currentType = 'site';
+        
+        // Initialize features
+        function updateFeatures(type) {
+            const container = document.getElementById('features-container');
+            const features = featuresByType[type] || featuresByType.site;
+            
+            container.innerHTML = features.map(feature => `
+                <label class="checkbox-item">
+                    <input type="checkbox" value="${feature}"> ${feature}
+                </label>
+            `).join('');
+        }
+        
+        // Type selector
+        document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentType = btn.dataset.type;
+                updateFeatures(currentType);
+            });
+        });
+        
+        // Initialize
+        updateFeatures('site');
+        
+        function generatePrompt() {
+            const name = document.getElementById('project-name').value || '[Nome do Projeto]';
+            const niche = document.getElementById('niche').value || '[Nicho]';
+            const audience = document.getElementById('audience').value || '[Público-alvo]';
+            const objective = document.getElementById('objective').value;
+            const style = document.getElementById('style').value;
+            const colors = document.getElementById('colors').value;
+            const references = document.getElementById('references').value;
+            const stack = document.getElementById('stack').value;
+            const complexity = document.getElementById('complexity').value;
+            const description = document.getElementById('description').value;
+            const pages = document.getElementById('pages').value;
+            const deadline = document.getElementById('deadline').value;
+            
+            // Get selected features
+            const selectedFeatures = Array.from(document.querySelectorAll('#features-container input:checked'))
+                .map(cb => cb.value);
+            
+            // Get selected integrations
+            const selectedIntegrations = Array.from(document.querySelectorAll('.checkbox-group input:checked'))
+                .map(cb => cb.value);
+            
+            const typeLabels = {
+                site: 'Site Institucional',
+                ecommerce: 'E-commerce',
+                landing: 'Landing Page',
+                app: 'Aplicação Web',
+                blog: 'Blog/Portal',
+                saas: 'SaaS/Dashboard',
+                portfolio: 'Portfólio',
+                programa: 'Programa/Software'
+            };
+            
+            const objectiveLabels = {
+                vendas: 'gerar vendas e conversões',
+                leads: 'captar leads qualificados',
+                brand: 'fortalecer presença de marca',
+                info: 'informar e educar o público',
+                engajamento: 'aumentar engajamento',
+                'app-download': 'promover download de aplicativo'
+            };
+            
+            const styleLabels = {
+                moderno: 'moderno e minimalista',
+                corporativo: 'corporativo e profissional',
+                criativo: 'criativo e artístico',
+                tecnologico: 'tecnológico e futurista',
+                elegante: 'elegante e sofisticado',
+                jovial: 'jovial e descontraído',
+                organico: 'orgânico e natural',
+                retro: 'retrô e vintage'
+            };
+            
+            const stackLabels = {
+                flex: 'a ser definida pelo desenvolvedor conforme necessidades',
+                react: 'React/Next.js',
+                vue: 'Vue.js/Nuxt',
+                wordpress: 'WordPress',
+                shopify: 'Shopify',
+                python: 'Python/Django',
+                php: 'PHP/Laravel',
+                nodejs: 'Node.js/Express'
+            };
+            
+            const complexityLabels = {
+                '1': 'Simples (MVP básico)',
+                '2': 'Médio (funcionalidades padrão)',
+                '3': 'Complexo (múltiplas integrações)',
+                '4': 'Avançado (arquitetura escalável)',
+                '5': 'Enterprise (solução robusta)'
+            };
+            
+            const deadlineLabels = {
+                urgente: 'Urgente (1-2 semanas)',
+                curto: 'Curto prazo (1 mês)',
+                medio: 'Prazo médio (2-3 meses)',
+                longo: 'Longo prazo (3-6 meses)',
+                flex: 'Flexível'
+            };
+            
+            const integrationLabels = {
+                stripe: 'Stripe/gateway de pagamentos',
+                maps: 'Google Maps/localização',
+                social: 'Login social (Google, Facebook)',
+                analytics: 'Google Analytics/tracking',
+                email: 'Email marketing (Mailchimp, etc)',
+                chat: 'Chat ao vivo/intercom',
+                api: 'Integração com API externa',
+                cdn: 'CDN para mídia/Cloudinary'
+            };
+            
+            let prompt = `╔══════════════════════════════════════════════════════════════╗
+║           BRIEFING TÉCNICO - ${typeLabels[currentType].toUpperCase().padEnd(29)}║
+╚══════════════════════════════════════════════════════════════╝
+
+📋 INFORMAÇÕES GERAIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Projeto: ${name}
+• Tipo: ${typeLabels[currentType]}
+• Nicho/Mercado: ${niche}
+• Público-Alvo: ${audience}
+• Objetivo Principal: ${objectiveLabels[objective]}
+• Nível de Complexidade: ${complexityLabels[complexity]}
+• Prazo Estimado: ${deadlineLabels[deadline]}
+`;
+            
+            if (description) {
+                prompt += `\n📝 DESCRIÇÃO DO PROJETO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${description}
+`;
+            }
+            
+            prompt += `\n🎨 DIRETRIZES DE DESIGN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Estilo Visual: ${styleLabels[style]}
+`;
+            
+            if (colors) {
+                prompt += `• Paleta de Cores: ${colors}\n`;
+            }
+            
+            if (references) {
+                prompt += `• Referências de Design: ${references}\n`;
+            }
+            
+            if (pages) {
+                prompt += `\n📄 ESTRUTURA DE PÁGINAS/SEÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${pages.split(',').map(p => `• ${p.trim()}`).join('\n')}
+`;
+            }
+            
+            if (selectedFeatures.length > 0) {
+                prompt += `\n⚙️ FUNCIONALIDADES REQUERIDAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${selectedFeatures.map(f => `✓ ${f}`).join('\n')}
+`;
+            }
+            
+            prompt += `\n🔧 ESPECIFICAÇÕES TÉCNICAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Stack Tecnológica: ${stackLabels[stack]}
+`;
+            
+            if (selectedIntegrations.length > 0) {
+                prompt += `\n🔗 INTEGRAÇÕES NECESSÁRIAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${selectedIntegrations.map(i => `• ${integrationLabels[i]}`).join('\n')}
+`;
+            }
+            
+            prompt += `\n📋 REQUISITOS ADICIONAIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Design responsivo (mobile-first)
+• Otimização para SEO
+• Performance e velocidade de carregamento
+• Acessibilidade (WCAG 2.1)
+• Cross-browser compatibility
+• Documentação técnica
+`;
+            
+            if (complexity >= '4') {
+                prompt += `• Arquitetura escalável\n• CI/CD pipeline\n• Testes automatizados\n`;
+            }
+            
+            if (complexity === '5') {
+                prompt += `• Monitoramento e logging\n• Backup automático\n• Disaster recovery plan\n`;
+            }
+            
+            prompt += `\n✅ CRITÉRIOS DE ACEITAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Código limpo e bem documentado
+2. Commits organizados e semanticamente versionados
+3. README completo com instruções de deploy
+4. Testes em ambiente de staging antes do lançamento
+5. Handoff com treinamento básico (se aplicável)
+
+💬 NOTAS FINAIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Busco um profissional comprometido com prazos, comunicativo e 
+que possa oferecer sugestões de melhoria durante o desenvolvimento. 
+Preferência por metodologia ágil com entregas parciais.
+
+═══════════════════════════════════════════════════════════════
+Gerado por Prompt Architect | ${new Date().toLocaleDateString('pt-BR')}
+═══════════════════════════════════════════════════════════════`;
+            
+            document.getElementById('output-text').textContent = prompt;
+            
+            // Scroll to output
+            document.querySelector('.output-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        function copyToClipboard() {
+            const text = document.getElementById('output-text').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.classList.add('copied');
+                btn.innerHTML = '<span>✓</span> Copiado!';
+                
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.innerHTML = '<span>📋</span> Copiar';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>'''
+
+# Save the file
+output_path = '/mnt/kimi/output/prompt_generator.html'
+with open(output_path, 'w', encoding='utf-8') as f:
+    f.write(html_content)
+
+print(f"✅ Gerador de Prompts criado com sucesso!")
+print(f"📁 Arquivo salvo em: {output_path}")
